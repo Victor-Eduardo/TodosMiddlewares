@@ -2,6 +2,7 @@ const express = require('express');
 const cors = require('cors');
 
 const { v4: uuidv4, validate } = require('uuid');
+const { json } = require('express');
 
 const app = express();
 app.use(express.json());
@@ -10,19 +11,67 @@ app.use(cors());
 const users = [];
 
 function checksExistsUserAccount(request, response, next) {
-  // Complete aqui
+  const { username } = request.headers;
+
+  const user = users.find((user) => user.username === username);
+
+  if( !user ) return response.status(404).json([{ error: 'Usuário não encontrado!' }]);
+
+  request.user = user;
+  
+  return next();
 }
 
 function checksCreateTodosUserAvailability(request, response, next) {
-  // Complete aqui
+  const { user } = request;
+  const proUser = user.pro;
+  const countTodos = user.todos.length;
+
+  if( !proUser && countTodos === 10 ) {
+    return response.status(403).json({ error: 'Não foi possível criar um novo Todo! Faça um upgrade para a versão Pro para criar um novo.' });
+  }
+
+  return next();
 }
 
 function checksTodoExists(request, response, next) {
-  // Complete aqui
+  const { id } = request.params;
+  const { username } = request.headers;
+
+  const user = users.find((user) => user.username === username);
+
+  if( !user ) {
+    return response.status(404).json([{ error: 'Usuário não encontrado!' }]);
+  }
+
+  if( !validate(id, 4) ) {
+    return response.status(400);
+  }
+
+  const todo = user.todos.find( (todo) => todo.id === id );
+
+  if( !todo ) {
+    return response.status(404).json({ error: 'Todo não encontrado.'});
+  }
+
+  request.todo = todo;
+  request.user = user;
+
+  return next();
 }
 
 function findUserById(request, response, next) {
-  // Complete aqui
+  const { id } = request.params;
+
+  const user = users.find((user) => user.id === id);
+
+  if( !user ) {
+    return response.status(404).json([{ error: 'Usuário não encontrado!' }]);
+  }
+
+  request.user = user;
+
+  return next();
 }
 
 app.post('/users', (request, response) => {
